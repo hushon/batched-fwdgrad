@@ -13,8 +13,7 @@ import torch.nn as nn
 # from ._meta import _IMAGENET_CATEGORIES
 # from ._utils import _ovewrite_named_param, handle_legacy_interface
 
-# from . import jvp_layers
-import jvp_layers
+from batched_fwdgrad import jvp_layers
 
 
 class ConvStemConfig(NamedTuple):
@@ -340,7 +339,69 @@ class CustomVisionTransformer(nn.Module):
 
 
 if __name__ == "__main__":
-    model = CustomVisionTransformer(
+    torch.backends.cudnn.benchmark = True
+    # torch.backends.cuda.matmul.allow_tf32 = True
+    # torch.backends.cudnn.allow_tf32 = True
+
+    batch_size = 64*(12+1)
+    # batch_size = 64
+    num_directions = 12
+    device = torch.device("cuda")
+
+    # x = torch.randn(batch_size, 3, 224, 224, device=device)
+    # dx = torch.randn(batch_size, num_directions, 3, 224, 224, device=device)
+
+    # # model_jvp = CustomVisionTransformer(
+    # #     image_size=224,
+    # #     patch_size=16,
+    # #     num_layers=12,
+    # #     num_heads=12,
+    # #     hidden_dim=768,
+    # #     mlp_dim=3072,
+    # # ).to(device)
+
+    # import torchvision
+    # model = torchvision.models.vit_b_16().to(device)
+
+    # import time
+    # import tqdm
+    # torch.cuda.synchronize()
+    # start_time = time.time()
+    # for _ in tqdm.trange(100):
+    #     with torch.no_grad():
+    #         # primal, dual = model_jvp(x, dx)
+    #         output = model(x)
+    # torch.cuda.synchronize()
+    # end_time = time.time()
+    # print(f"Inference time: {end_time - start_time} seconds")
+
+
+
+    def rademacher_vector(*size):
+        # Sample from Bernoulli(0.5) and convert {0, 1} to {-1, 1}
+        return 2 * torch.randint(0, 2, size=size).float() - 1
+
+    batch_size = 2
+    num_directions = 10
+
+    x = torch.randn(batch_size, 3, 224, 224, requires_grad=True)
+    dx = torch.randn(batch_size, num_directions, 3, 224, 224)
+    # dx = rademacher_vector(batch_size, num_directions, 3, 224, 224)
+
+    target = torch.randint(0, 5, (batch_size,))
+
+    import torchvision
+    model = torchvision.models.vit_b_16()
+    state_dict = model.state_dict()
+
+    dual_list = []
+    with torch.no_grad():
+        for i in range(num_directions):
+            primal, dual = torch.autograd.functional.jvp(model, x, dx[:, i])
+            dual_list.append(dual)
+        dual = torch.stack(dual_list, dim=1)
+
+    model_jvp = CustomVisionTransformer(
         image_size=224,
         patch_size=16,
         num_layers=12,
@@ -348,10 +409,15 @@ if __name__ == "__main__":
         hidden_dim=768,
         mlp_dim=3072,
     )
-    x = torch.randn(2,3,224,224)
-    dx = torch.randn(2,5,3,224,224)
-    primal, dual = model(x,dx)
+    model_jvp.load_state_dict(state_dict)
+    with torch.no_grad():
+        primal2, dual2 = model_jvp(x, dx)
+        # primal2, dual2 = model2(x, dx, target)
+
     breakpoint()
+
+    assert torch.allclose(primal.view(batch_size, -1), primal2.view(batch_size, -1), atol=1e-6)
+    assert torch.allclose(dual.view(batch_size, num_directions, -1), dual2.view(batch_size, num_directions, -1), atol=1e-6)
 
 
 def _vision_transformer(

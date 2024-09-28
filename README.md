@@ -21,8 +21,9 @@ model = CustomVisionTransformer(
 
 batch_size = 2
 num_directions = 5
-
 x = torch.randn(batch_size, 3, 224, 224)
 dx = torch.randn(batch_size, num_directions, 3, 224, 224)
-primal, dual = model(x, dx)
+
+with torch.no_grad():
+    primal, dual = model(x, dx)
 ```
