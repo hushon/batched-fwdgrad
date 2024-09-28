@@ -2,6 +2,8 @@
 ## Introduction
 Computes multiple directional derivatives per forward pass by batching the JVPs.
 
+$y=f(x)$ is computed jointly with $\{\dot{y}_i\} = \{f'(x)\dot{x}_i\}$.
+
 ## Installation
 ```
 pip install git+https://github.com/hushon/batched-fwdgrad.git
