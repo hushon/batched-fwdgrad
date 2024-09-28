@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "batched-fwdgrad"
+version = "0.1.0"
+description = "A library for batched forward-mode gradient computation"
+authors = [
+    { name = "Your Name", email = "your.email@example.com" }
+]
+dependencies = [
+    "numpy",
+    "torch",
+]
+# Remove `python` from here, as it's not allowed in the `project` section
+# Use the `python-requires` field under `[tool.setuptools]` instead
+
+[project.urls]
+homepage = "https://github.com/hushon/batched-fwdgrad"
