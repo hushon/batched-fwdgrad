@@ -420,36 +420,36 @@ if __name__ == "__main__":
     assert torch.allclose(dual.view(batch_size, num_directions, -1), dual2.view(batch_size, num_directions, -1), atol=1e-6)
 
 
-def _vision_transformer(
-    patch_size: int,
-    num_layers: int,
-    num_heads: int,
-    hidden_dim: int,
-    mlp_dim: int,
-    weights: Optional[WeightsEnum],
-    progress: bool,
-    **kwargs: Any,
-) -> CustomVisionTransformer:
-    if weights is not None:
-        _ovewrite_named_param(kwargs, "num_classes", len(weights.meta["categories"]))
-        assert weights.meta["min_size"][0] == weights.meta["min_size"][1]
-        _ovewrite_named_param(kwargs, "image_size", weights.meta["min_size"][0])
-    image_size = kwargs.pop("image_size", 224)
+# def _vision_transformer(
+#     patch_size: int,
+#     num_layers: int,
+#     num_heads: int,
+#     hidden_dim: int,
+#     mlp_dim: int,
+#     weights: Optional[WeightsEnum],
+#     progress: bool,
+#     **kwargs: Any,
+# ) -> CustomVisionTransformer:
+#     if weights is not None:
+#         _ovewrite_named_param(kwargs, "num_classes", len(weights.meta["categories"]))
+#         assert weights.meta["min_size"][0] == weights.meta["min_size"][1]
+#         _ovewrite_named_param(kwargs, "image_size", weights.meta["min_size"][0])
+#     image_size = kwargs.pop("image_size", 224)
 
-    model = CustomVisionTransformer(
-        image_size=image_size,
-        patch_size=patch_size,
-        num_layers=num_layers,
-        num_heads=num_heads,
-        hidden_dim=hidden_dim,
-        mlp_dim=mlp_dim,
-        **kwargs,
-    )
+#     model = CustomVisionTransformer(
+#         image_size=image_size,
+#         patch_size=patch_size,
+#         num_layers=num_layers,
+#         num_heads=num_heads,
+#         hidden_dim=hidden_dim,
+#         mlp_dim=mlp_dim,
+#         **kwargs,
+#     )
 
-    if weights:
-        model.load_state_dict(weights.get_state_dict(progress=progress, check_hash=True))
+#     if weights:
+#         model.load_state_dict(weights.get_state_dict(progress=progress, check_hash=True))
 
-    return model
+#     return model
 
 
 # _COMMON_META: Dict[str, Any] = {
@@ -731,249 +731,249 @@ def _vision_transformer(
 #     DEFAULT = IMAGENET1K_SWAG_E2E_V1
 
 
-@register_model()
-@handle_legacy_interface(weights=("pretrained", ViT_B_16_Weights.IMAGENET1K_V1))
-def vit_b_16(*, weights: Optional[ViT_B_16_Weights] = None, progress: bool = True, **kwargs: Any) -> VisionTransformer:
-    """
-    Constructs a vit_b_16 architecture from
-    `An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale <https://arxiv.org/abs/2010.11929>`_.
+# @register_model()
+# @handle_legacy_interface(weights=("pretrained", ViT_B_16_Weights.IMAGENET1K_V1))
+# def vit_b_16(*, weights: Optional[ViT_B_16_Weights] = None, progress: bool = True, **kwargs: Any) -> VisionTransformer:
+#     """
+#     Constructs a vit_b_16 architecture from
+#     `An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale <https://arxiv.org/abs/2010.11929>`_.
 
-    Args:
-        weights (:class:`~torchvision.models.ViT_B_16_Weights`, optional): The pretrained
-            weights to use. See :class:`~torchvision.models.ViT_B_16_Weights`
-            below for more details and possible values. By default, no pre-trained weights are used.
-        progress (bool, optional): If True, displays a progress bar of the download to stderr. Default is True.
-        **kwargs: parameters passed to the ``torchvision.models.vision_transformer.VisionTransformer``
-            base class. Please refer to the `source code
-            <https://github.com/pytorch/vision/blob/main/torchvision/models/vision_transformer.py>`_
-            for more details about this class.
+#     Args:
+#         weights (:class:`~torchvision.models.ViT_B_16_Weights`, optional): The pretrained
+#             weights to use. See :class:`~torchvision.models.ViT_B_16_Weights`
+#             below for more details and possible values. By default, no pre-trained weights are used.
+#         progress (bool, optional): If True, displays a progress bar of the download to stderr. Default is True.
+#         **kwargs: parameters passed to the ``torchvision.models.vision_transformer.VisionTransformer``
+#             base class. Please refer to the `source code
+#             <https://github.com/pytorch/vision/blob/main/torchvision/models/vision_transformer.py>`_
+#             for more details about this class.
 
-    .. autoclass:: torchvision.models.ViT_B_16_Weights
-        :members:
-    """
-    weights = ViT_B_16_Weights.verify(weights)
+#     .. autoclass:: torchvision.models.ViT_B_16_Weights
+#         :members:
+#     """
+#     weights = ViT_B_16_Weights.verify(weights)
 
-    return _vision_transformer(
-        patch_size=16,
-        num_layers=12,
-        num_heads=12,
-        hidden_dim=768,
-        mlp_dim=3072,
-        weights=weights,
-        progress=progress,
-        **kwargs,
-    )
-
-
-@register_model()
-@handle_legacy_interface(weights=("pretrained", ViT_B_32_Weights.IMAGENET1K_V1))
-def vit_b_32(*, weights: Optional[ViT_B_32_Weights] = None, progress: bool = True, **kwargs: Any) -> VisionTransformer:
-    """
-    Constructs a vit_b_32 architecture from
-    `An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale <https://arxiv.org/abs/2010.11929>`_.
-
-    Args:
-        weights (:class:`~torchvision.models.ViT_B_32_Weights`, optional): The pretrained
-            weights to use. See :class:`~torchvision.models.ViT_B_32_Weights`
-            below for more details and possible values. By default, no pre-trained weights are used.
-        progress (bool, optional): If True, displays a progress bar of the download to stderr. Default is True.
-        **kwargs: parameters passed to the ``torchvision.models.vision_transformer.VisionTransformer``
-            base class. Please refer to the `source code
-            <https://github.com/pytorch/vision/blob/main/torchvision/models/vision_transformer.py>`_
-            for more details about this class.
-
-    .. autoclass:: torchvision.models.ViT_B_32_Weights
-        :members:
-    """
-    weights = ViT_B_32_Weights.verify(weights)
-
-    return _vision_transformer(
-        patch_size=32,
-        num_layers=12,
-        num_heads=12,
-        hidden_dim=768,
-        mlp_dim=3072,
-        weights=weights,
-        progress=progress,
-        **kwargs,
-    )
+#     return _vision_transformer(
+#         patch_size=16,
+#         num_layers=12,
+#         num_heads=12,
+#         hidden_dim=768,
+#         mlp_dim=3072,
+#         weights=weights,
+#         progress=progress,
+#         **kwargs,
+#     )
 
 
-@register_model()
-@handle_legacy_interface(weights=("pretrained", ViT_L_16_Weights.IMAGENET1K_V1))
-def vit_l_16(*, weights: Optional[ViT_L_16_Weights] = None, progress: bool = True, **kwargs: Any) -> VisionTransformer:
-    """
-    Constructs a vit_l_16 architecture from
-    `An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale <https://arxiv.org/abs/2010.11929>`_.
+# @register_model()
+# @handle_legacy_interface(weights=("pretrained", ViT_B_32_Weights.IMAGENET1K_V1))
+# def vit_b_32(*, weights: Optional[ViT_B_32_Weights] = None, progress: bool = True, **kwargs: Any) -> VisionTransformer:
+#     """
+#     Constructs a vit_b_32 architecture from
+#     `An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale <https://arxiv.org/abs/2010.11929>`_.
 
-    Args:
-        weights (:class:`~torchvision.models.ViT_L_16_Weights`, optional): The pretrained
-            weights to use. See :class:`~torchvision.models.ViT_L_16_Weights`
-            below for more details and possible values. By default, no pre-trained weights are used.
-        progress (bool, optional): If True, displays a progress bar of the download to stderr. Default is True.
-        **kwargs: parameters passed to the ``torchvision.models.vision_transformer.VisionTransformer``
-            base class. Please refer to the `source code
-            <https://github.com/pytorch/vision/blob/main/torchvision/models/vision_transformer.py>`_
-            for more details about this class.
+#     Args:
+#         weights (:class:`~torchvision.models.ViT_B_32_Weights`, optional): The pretrained
+#             weights to use. See :class:`~torchvision.models.ViT_B_32_Weights`
+#             below for more details and possible values. By default, no pre-trained weights are used.
+#         progress (bool, optional): If True, displays a progress bar of the download to stderr. Default is True.
+#         **kwargs: parameters passed to the ``torchvision.models.vision_transformer.VisionTransformer``
+#             base class. Please refer to the `source code
+#             <https://github.com/pytorch/vision/blob/main/torchvision/models/vision_transformer.py>`_
+#             for more details about this class.
 
-    .. autoclass:: torchvision.models.ViT_L_16_Weights
-        :members:
-    """
-    weights = ViT_L_16_Weights.verify(weights)
+#     .. autoclass:: torchvision.models.ViT_B_32_Weights
+#         :members:
+#     """
+#     weights = ViT_B_32_Weights.verify(weights)
 
-    return _vision_transformer(
-        patch_size=16,
-        num_layers=24,
-        num_heads=16,
-        hidden_dim=1024,
-        mlp_dim=4096,
-        weights=weights,
-        progress=progress,
-        **kwargs,
-    )
-
-
-@register_model()
-@handle_legacy_interface(weights=("pretrained", ViT_L_32_Weights.IMAGENET1K_V1))
-def vit_l_32(*, weights: Optional[ViT_L_32_Weights] = None, progress: bool = True, **kwargs: Any) -> VisionTransformer:
-    """
-    Constructs a vit_l_32 architecture from
-    `An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale <https://arxiv.org/abs/2010.11929>`_.
-
-    Args:
-        weights (:class:`~torchvision.models.ViT_L_32_Weights`, optional): The pretrained
-            weights to use. See :class:`~torchvision.models.ViT_L_32_Weights`
-            below for more details and possible values. By default, no pre-trained weights are used.
-        progress (bool, optional): If True, displays a progress bar of the download to stderr. Default is True.
-        **kwargs: parameters passed to the ``torchvision.models.vision_transformer.VisionTransformer``
-            base class. Please refer to the `source code
-            <https://github.com/pytorch/vision/blob/main/torchvision/models/vision_transformer.py>`_
-            for more details about this class.
-
-    .. autoclass:: torchvision.models.ViT_L_32_Weights
-        :members:
-    """
-    weights = ViT_L_32_Weights.verify(weights)
-
-    return _vision_transformer(
-        patch_size=32,
-        num_layers=24,
-        num_heads=16,
-        hidden_dim=1024,
-        mlp_dim=4096,
-        weights=weights,
-        progress=progress,
-        **kwargs,
-    )
+#     return _vision_transformer(
+#         patch_size=32,
+#         num_layers=12,
+#         num_heads=12,
+#         hidden_dim=768,
+#         mlp_dim=3072,
+#         weights=weights,
+#         progress=progress,
+#         **kwargs,
+#     )
 
 
-@register_model()
-@handle_legacy_interface(weights=("pretrained", None))
-def vit_h_14(*, weights: Optional[ViT_H_14_Weights] = None, progress: bool = True, **kwargs: Any) -> VisionTransformer:
-    """
-    Constructs a vit_h_14 architecture from
-    `An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale <https://arxiv.org/abs/2010.11929>`_.
+# @register_model()
+# @handle_legacy_interface(weights=("pretrained", ViT_L_16_Weights.IMAGENET1K_V1))
+# def vit_l_16(*, weights: Optional[ViT_L_16_Weights] = None, progress: bool = True, **kwargs: Any) -> VisionTransformer:
+#     """
+#     Constructs a vit_l_16 architecture from
+#     `An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale <https://arxiv.org/abs/2010.11929>`_.
 
-    Args:
-        weights (:class:`~torchvision.models.ViT_H_14_Weights`, optional): The pretrained
-            weights to use. See :class:`~torchvision.models.ViT_H_14_Weights`
-            below for more details and possible values. By default, no pre-trained weights are used.
-        progress (bool, optional): If True, displays a progress bar of the download to stderr. Default is True.
-        **kwargs: parameters passed to the ``torchvision.models.vision_transformer.VisionTransformer``
-            base class. Please refer to the `source code
-            <https://github.com/pytorch/vision/blob/main/torchvision/models/vision_transformer.py>`_
-            for more details about this class.
+#     Args:
+#         weights (:class:`~torchvision.models.ViT_L_16_Weights`, optional): The pretrained
+#             weights to use. See :class:`~torchvision.models.ViT_L_16_Weights`
+#             below for more details and possible values. By default, no pre-trained weights are used.
+#         progress (bool, optional): If True, displays a progress bar of the download to stderr. Default is True.
+#         **kwargs: parameters passed to the ``torchvision.models.vision_transformer.VisionTransformer``
+#             base class. Please refer to the `source code
+#             <https://github.com/pytorch/vision/blob/main/torchvision/models/vision_transformer.py>`_
+#             for more details about this class.
 
-    .. autoclass:: torchvision.models.ViT_H_14_Weights
-        :members:
-    """
-    weights = ViT_H_14_Weights.verify(weights)
+#     .. autoclass:: torchvision.models.ViT_L_16_Weights
+#         :members:
+#     """
+#     weights = ViT_L_16_Weights.verify(weights)
 
-    return _vision_transformer(
-        patch_size=14,
-        num_layers=32,
-        num_heads=16,
-        hidden_dim=1280,
-        mlp_dim=5120,
-        weights=weights,
-        progress=progress,
-        **kwargs,
-    )
+#     return _vision_transformer(
+#         patch_size=16,
+#         num_layers=24,
+#         num_heads=16,
+#         hidden_dim=1024,
+#         mlp_dim=4096,
+#         weights=weights,
+#         progress=progress,
+#         **kwargs,
+#     )
 
 
-def interpolate_embeddings(
-    image_size: int,
-    patch_size: int,
-    model_state: "OrderedDict[str, torch.Tensor]",
-    interpolation_mode: str = "bicubic",
-    reset_heads: bool = False,
-) -> "OrderedDict[str, torch.Tensor]":
-    """This function helps interpolate positional embeddings during checkpoint loading,
-    especially when you want to apply a pre-trained model on images with different resolution.
+# @register_model()
+# @handle_legacy_interface(weights=("pretrained", ViT_L_32_Weights.IMAGENET1K_V1))
+# def vit_l_32(*, weights: Optional[ViT_L_32_Weights] = None, progress: bool = True, **kwargs: Any) -> VisionTransformer:
+#     """
+#     Constructs a vit_l_32 architecture from
+#     `An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale <https://arxiv.org/abs/2010.11929>`_.
 
-    Args:
-        image_size (int): Image size of the new model.
-        patch_size (int): Patch size of the new model.
-        model_state (OrderedDict[str, torch.Tensor]): State dict of the pre-trained model.
-        interpolation_mode (str): The algorithm used for upsampling. Default: bicubic.
-        reset_heads (bool): If true, not copying the state of heads. Default: False.
+#     Args:
+#         weights (:class:`~torchvision.models.ViT_L_32_Weights`, optional): The pretrained
+#             weights to use. See :class:`~torchvision.models.ViT_L_32_Weights`
+#             below for more details and possible values. By default, no pre-trained weights are used.
+#         progress (bool, optional): If True, displays a progress bar of the download to stderr. Default is True.
+#         **kwargs: parameters passed to the ``torchvision.models.vision_transformer.VisionTransformer``
+#             base class. Please refer to the `source code
+#             <https://github.com/pytorch/vision/blob/main/torchvision/models/vision_transformer.py>`_
+#             for more details about this class.
 
-    Returns:
-        OrderedDict[str, torch.Tensor]: A state dict which can be loaded into the new model.
-    """
-    # Shape of pos_embedding is (1, seq_length, hidden_dim)
-    pos_embedding = model_state["encoder.pos_embedding"]
-    n, seq_length, hidden_dim = pos_embedding.shape
-    if n != 1:
-        raise ValueError(f"Unexpected position embedding shape: {pos_embedding.shape}")
+#     .. autoclass:: torchvision.models.ViT_L_32_Weights
+#         :members:
+#     """
+#     weights = ViT_L_32_Weights.verify(weights)
 
-    new_seq_length = (image_size // patch_size) ** 2 + 1
+#     return _vision_transformer(
+#         patch_size=32,
+#         num_layers=24,
+#         num_heads=16,
+#         hidden_dim=1024,
+#         mlp_dim=4096,
+#         weights=weights,
+#         progress=progress,
+#         **kwargs,
+#     )
 
-    # Need to interpolate the weights for the position embedding.
-    # We do this by reshaping the positions embeddings to a 2d grid, performing
-    # an interpolation in the (h, w) space and then reshaping back to a 1d grid.
-    if new_seq_length != seq_length:
-        # The class token embedding shouldn't be interpolated, so we split it up.
-        seq_length -= 1
-        new_seq_length -= 1
-        pos_embedding_token = pos_embedding[:, :1, :]
-        pos_embedding_img = pos_embedding[:, 1:, :]
 
-        # (1, seq_length, hidden_dim) -> (1, hidden_dim, seq_length)
-        pos_embedding_img = pos_embedding_img.permute(0, 2, 1)
-        seq_length_1d = int(math.sqrt(seq_length))
-        if seq_length_1d * seq_length_1d != seq_length:
-            raise ValueError(
-                f"seq_length is not a perfect square! Instead got seq_length_1d * seq_length_1d = {seq_length_1d * seq_length_1d } and seq_length = {seq_length}"
-            )
+# @register_model()
+# @handle_legacy_interface(weights=("pretrained", None))
+# def vit_h_14(*, weights: Optional[ViT_H_14_Weights] = None, progress: bool = True, **kwargs: Any) -> VisionTransformer:
+#     """
+#     Constructs a vit_h_14 architecture from
+#     `An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale <https://arxiv.org/abs/2010.11929>`_.
 
-        # (1, hidden_dim, seq_length) -> (1, hidden_dim, seq_l_1d, seq_l_1d)
-        pos_embedding_img = pos_embedding_img.reshape(1, hidden_dim, seq_length_1d, seq_length_1d)
-        new_seq_length_1d = image_size // patch_size
+#     Args:
+#         weights (:class:`~torchvision.models.ViT_H_14_Weights`, optional): The pretrained
+#             weights to use. See :class:`~torchvision.models.ViT_H_14_Weights`
+#             below for more details and possible values. By default, no pre-trained weights are used.
+#         progress (bool, optional): If True, displays a progress bar of the download to stderr. Default is True.
+#         **kwargs: parameters passed to the ``torchvision.models.vision_transformer.VisionTransformer``
+#             base class. Please refer to the `source code
+#             <https://github.com/pytorch/vision/blob/main/torchvision/models/vision_transformer.py>`_
+#             for more details about this class.
 
-        # Perform interpolation.
-        # (1, hidden_dim, seq_l_1d, seq_l_1d) -> (1, hidden_dim, new_seq_l_1d, new_seq_l_1d)
-        new_pos_embedding_img = nn.functional.interpolate(
-            pos_embedding_img,
-            size=new_seq_length_1d,
-            mode=interpolation_mode,
-            align_corners=True,
-        )
+#     .. autoclass:: torchvision.models.ViT_H_14_Weights
+#         :members:
+#     """
+#     weights = ViT_H_14_Weights.verify(weights)
 
-        # (1, hidden_dim, new_seq_l_1d, new_seq_l_1d) -> (1, hidden_dim, new_seq_length)
-        new_pos_embedding_img = new_pos_embedding_img.reshape(1, hidden_dim, new_seq_length)
+#     return _vision_transformer(
+#         patch_size=14,
+#         num_layers=32,
+#         num_heads=16,
+#         hidden_dim=1280,
+#         mlp_dim=5120,
+#         weights=weights,
+#         progress=progress,
+#         **kwargs,
+#     )
 
-        # (1, hidden_dim, new_seq_length) -> (1, new_seq_length, hidden_dim)
-        new_pos_embedding_img = new_pos_embedding_img.permute(0, 2, 1)
-        new_pos_embedding = torch.cat([pos_embedding_token, new_pos_embedding_img], dim=1)
 
-        model_state["encoder.pos_embedding"] = new_pos_embedding
+# def interpolate_embeddings(
+#     image_size: int,
+#     patch_size: int,
+#     model_state: "OrderedDict[str, torch.Tensor]",
+#     interpolation_mode: str = "bicubic",
+#     reset_heads: bool = False,
+# ) -> "OrderedDict[str, torch.Tensor]":
+#     """This function helps interpolate positional embeddings during checkpoint loading,
+#     especially when you want to apply a pre-trained model on images with different resolution.
 
-        if reset_heads:
-            model_state_copy: "OrderedDict[str, torch.Tensor]" = OrderedDict()
-            for k, v in model_state.items():
-                if not k.startswith("heads"):
-                    model_state_copy[k] = v
-            model_state = model_state_copy
+#     Args:
+#         image_size (int): Image size of the new model.
+#         patch_size (int): Patch size of the new model.
+#         model_state (OrderedDict[str, torch.Tensor]): State dict of the pre-trained model.
+#         interpolation_mode (str): The algorithm used for upsampling. Default: bicubic.
+#         reset_heads (bool): If true, not copying the state of heads. Default: False.
 
-    return model_state
+#     Returns:
+#         OrderedDict[str, torch.Tensor]: A state dict which can be loaded into the new model.
+#     """
+#     # Shape of pos_embedding is (1, seq_length, hidden_dim)
+#     pos_embedding = model_state["encoder.pos_embedding"]
+#     n, seq_length, hidden_dim = pos_embedding.shape
+#     if n != 1:
+#         raise ValueError(f"Unexpected position embedding shape: {pos_embedding.shape}")
+
+#     new_seq_length = (image_size // patch_size) ** 2 + 1
+
+#     # Need to interpolate the weights for the position embedding.
+#     # We do this by reshaping the positions embeddings to a 2d grid, performing
+#     # an interpolation in the (h, w) space and then reshaping back to a 1d grid.
+#     if new_seq_length != seq_length:
+#         # The class token embedding shouldn't be interpolated, so we split it up.
+#         seq_length -= 1
+#         new_seq_length -= 1
+#         pos_embedding_token = pos_embedding[:, :1, :]
+#         pos_embedding_img = pos_embedding[:, 1:, :]
+
+#         # (1, seq_length, hidden_dim) -> (1, hidden_dim, seq_length)
+#         pos_embedding_img = pos_embedding_img.permute(0, 2, 1)
+#         seq_length_1d = int(math.sqrt(seq_length))
+#         if seq_length_1d * seq_length_1d != seq_length:
+#             raise ValueError(
+#                 f"seq_length is not a perfect square! Instead got seq_length_1d * seq_length_1d = {seq_length_1d * seq_length_1d } and seq_length = {seq_length}"
+#             )
+
+#         # (1, hidden_dim, seq_length) -> (1, hidden_dim, seq_l_1d, seq_l_1d)
+#         pos_embedding_img = pos_embedding_img.reshape(1, hidden_dim, seq_length_1d, seq_length_1d)
+#         new_seq_length_1d = image_size // patch_size
+
+#         # Perform interpolation.
+#         # (1, hidden_dim, seq_l_1d, seq_l_1d) -> (1, hidden_dim, new_seq_l_1d, new_seq_l_1d)
+#         new_pos_embedding_img = nn.functional.interpolate(
+#             pos_embedding_img,
+#             size=new_seq_length_1d,
+#             mode=interpolation_mode,
+#             align_corners=True,
+#         )
+
+#         # (1, hidden_dim, new_seq_l_1d, new_seq_l_1d) -> (1, hidden_dim, new_seq_length)
+#         new_pos_embedding_img = new_pos_embedding_img.reshape(1, hidden_dim, new_seq_length)
+
+#         # (1, hidden_dim, new_seq_length) -> (1, new_seq_length, hidden_dim)
+#         new_pos_embedding_img = new_pos_embedding_img.permute(0, 2, 1)
+#         new_pos_embedding = torch.cat([pos_embedding_token, new_pos_embedding_img], dim=1)
+
+#         model_state["encoder.pos_embedding"] = new_pos_embedding
+
+#         if reset_heads:
+#             model_state_copy: "OrderedDict[str, torch.Tensor]" = OrderedDict()
+#             for k, v in model_state.items():
+#                 if not k.startswith("heads"):
+#                     model_state_copy[k] = v
+#             model_state = model_state_copy
+
+#     return model_state

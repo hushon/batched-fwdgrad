@@ -1,4 +1,6 @@
 # batched-fwdgrad
+## Introduction
+Computes multiple directional derivatives per forward pass by batching the JVPs.
 
 ## Installation
 ```
@@ -25,5 +27,5 @@ x = torch.randn(batch_size, 3, 224, 224)
 dx = torch.randn(batch_size, num_directions, 3, 224, 224)
 
 with torch.no_grad():
-    primal, dual = model(x, dx)
+    y, dy = model(x, dx)
 ```
