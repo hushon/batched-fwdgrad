@@ -31,3 +31,21 @@ dx = torch.randn(batch_size, num_directions, 3, 224, 224)
 with torch.no_grad():
     y, dy = model(x, dx)
 ```
+
+## Estimate the gradient $\partial y / \partial x$ using JVP
+
+We can compute $\mathop{\mathbb{E}}\left[\frac{\partial y}{\partial x} v v^\top\right] = \frac{\partial y}{\partial x} \mathop{\mathbb{E}}\left[v v^\top\right] = \frac{\partial y}{\partial x}$ where $v\sim\mathcal{N}(0,\mathbb{I})$. The JVPs $\frac{\partial y}{\partial x} v$ for the Monte Carlo estimation are efficiently computed using forward-mode differentiation.
+```python
+batch_size = 1
+num_directions = 1000
+x = torch.randn(batch_size, 3, 224, 224)
+dx = torch.randn(batch_size, num_directions, 3, 224, 224)
+
+with torch.no_grad():
+    y, dy = loss_fn(x, dx)
+
+dx = dx.view(batch_size, num_directions, -1)  # (batch_size, num_directions, in_dim)
+dy = dy.view(batch_size, num_directions, -1)  # (batch_size, num_directions, out_dim)
+
+x_grad = torch.mean(dy.view(batch_size, num_directions, 1, 1, 1) * dx, dim=1)
+```

@@ -5,13 +5,13 @@ import einops
 from batched_fwdgrad import jvp_layers, models
 
 torch.backends.cudnn.benchmark = True
-torch.backends.cuda.matmul.allow_tf32 = True
-torch.backends.cudnn.allow_tf32 = True
+# torch.backends.cuda.matmul.allow_tf32 = True
+# torch.backends.cudnn.allow_tf32 = True
 
 
-def rademacher_vector(*size):
+def rademacher_vector(*size, **kwargs):
     # Sample from Bernoulli(0.5) and convert {0, 1} to {-1, 1}
-    return 2 * torch.randint(0, 2, size=size).float() - 1
+    return 2 * torch.randint(0, 2, size=size, **kwargs).float() - 1
 
 
 def jvp_sanity_check(model, jvp_model, x, dx):
@@ -154,8 +154,8 @@ if __name__ == "__main__":
     num_directions = 12
     sample_shape = (3, 224, 224)
     device = torch.device("cuda")
-    x = torch.randn(batch_size, *sample_shape).to(device)
-    dx = rademacher_vector(batch_size, num_directions, *sample_shape).to(device)
+    x = torch.randn(batch_size, *sample_shape, device=device)
+    dx = rademacher_vector(batch_size, num_directions, *sample_shape, device=device)
 
     model = model.to(device)
     model2 = model2.to(device)
