@@ -44,9 +44,6 @@ dx = torch.randn(batch_size, num_directions, 3, 224, 224)
 with torch.no_grad():
     y, dy = loss_fn(x, dx)
 
-dx = dx.view(batch_size, num_directions, -1)  # (batch_size, num_directions, in_dim)
-dy = dy.view(batch_size, num_directions, -1)  # (batch_size, num_directions, out_dim)
-
 x_grad = torch.mean(dy.view(batch_size, num_directions, 1, 1, 1) * dx, dim=1)
 ```
 
