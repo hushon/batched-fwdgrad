@@ -49,3 +49,14 @@ dy = dy.view(batch_size, num_directions, -1)  # (batch_size, num_directions, out
 
 x_grad = torch.mean(dy.view(batch_size, num_directions, 1, 1, 1) * dx, dim=1)
 ```
+
+## Cite this repo
+If you found this work useful, please consider citing it: 
+```
+@software{batchedfwdgrad2024,
+  title = {{batched-fwdgrad}},
+  url = {https://github.com/hushon/batched-fwdgrad},
+  version = {0.1.0},
+  year = {2024}
+}
+```
