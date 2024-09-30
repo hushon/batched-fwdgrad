@@ -26,10 +26,11 @@ model = CustomVisionTransformer(
 batch_size = 2
 num_directions = 5
 x = torch.randn(batch_size, 3, 224, 224)
-dx = torch.randn(batch_size, num_directions, 3, 224, 224)
+x.tangent = torch.randn(batch_size, num_directions, 3, 224, 224)
 
 with torch.no_grad():
-    y, dy = model(x, dx)
+    y = model(x)
+y_tangent = y.tangent
 ```
 
 ## Estimate the gradient $\partial y / \partial x$ using JVP
@@ -39,12 +40,12 @@ We can compute $\mathop{\mathbb{E}}\left[\frac{\partial y}{\partial x} v v^\top\
 batch_size = 1
 num_directions = 1000
 x = torch.randn(batch_size, 3, 224, 224)
-dx = torch.randn(batch_size, num_directions, 3, 224, 224)
+x.tangent = torch.randn(batch_size, num_directions, 3, 224, 224)
 
 with torch.no_grad():
-    y, dy = loss_fn(x, dx)
+    y = loss_fn(x)
 
-x_grad = torch.mean(dy.view(batch_size, num_directions, 1, 1, 1) * dx, dim=1)
+x_grad = torch.mean(y.tangent.view(batch_size, num_directions, 1, 1, 1) * x.tangent, dim=1)
 ```
 
 ## Cite this repo

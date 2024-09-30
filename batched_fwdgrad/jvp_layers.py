@@ -4,33 +4,32 @@ import torch.nn.functional as F
 from torch.nn.modules.utils import _single, _pair, _triple, _reverse_repeat_tuple
 from torch.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Tuple
-import einops
 import math
 
 
-class CustomSequential(nn.Sequential):
-    def forward(self, input: torch.Tensor, jvp: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+class Sequential(nn.Sequential):
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
         for module in self:
-            input, jvp = module(input, jvp)
-        return input, jvp
+            input = module(input)
+        return input
 
 
-class CustomLinear(nn.Linear):
-    def forward(self, input: torch.Tensor, jvp: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+class Linear(nn.Linear):
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
         output = super().forward(input)
-        jvp = super().forward(jvp)
-        return output, jvp
+        output.tangent = super().forward(input.tangent)
+        return output
 
 
-class CustomReLU(nn.ReLU):
-    def forward(self, input, jvp):
+class ReLU(nn.ReLU):
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
         mask = input > 0.
         output = F.relu(input, self.inplace)
-        jvp = jvp * mask.unsqueeze_(1)
-        return output, jvp
+        output.tangent = input.tangent * mask.unsqueeze_(1)
+        return output
 
 
-# class CustomLeakyReLU(nn.LeakyReLU):
+# class LeakyReLU(nn.LeakyReLU):
 #     def forward(self, input, jvp):
 #         mask = input > 0.
 #         output = F.leaky_relu(input, self.negative_slope, self.inplace)
@@ -39,7 +38,7 @@ class CustomReLU(nn.ReLU):
 #         return output, jvp
 
 
-# class CustomGeLU(nn.GELU):
+# class GeLU(nn.GELU):
 #     def forward(self, input: torch.Tensor, jvp: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
 #         r"""
 #         Jacobian is computed using the sigmoid approximation of GeLU
@@ -52,8 +51,8 @@ class CustomReLU(nn.ReLU):
 #         jvp = jvp.mul_(jacobian)
 #         return output, jvp
 
-class CustomGeLU(nn.GELU):
-    def forward(self, x: torch.Tensor, x_tangent: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+class GELU(nn.GELU):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Efficiently computes the GELU activation and its JVP.
 
@@ -80,43 +79,43 @@ class CustomGeLU(nn.GELU):
         y = x * Phi_x
 
         # Compute gradient
-        grad = Phi_x + x * phi_x
+        y.tangent = Phi_x + x * phi_x
 
         # Compute y_tangent
-        y_tangent = grad.unsqueeze(1) * x_tangent
+        y.tangent = y.tangent.unsqueeze(1) * x.tangent
 
-        return y, y_tangent
+        return y
 
 
-class CustomTanh(nn.Tanh):
-    def forward(self, input: torch.Tensor, jvp: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+class Tanh(nn.Tanh):
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
         output = F.tanh(input)
-        jvp = jvp * (1 - output ** 2).unsqueeze_(1)
-        return output, jvp
+        output.tangent = input.tangent * (1 - output ** 2).unsqueeze_(1)
+        return output
 
 
-class CustomDropout(nn.Dropout):
-    def forward(self, x: torch.Tensor, x_tangent: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+class Dropout(nn.Dropout):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         output = super().forward(x)
         if self.training:
             mask = (output.abs() > 0.0).float()
-            jvp = (mask.unsqueeze(1) * x_tangent).div_(1 - self.p)
+            output.tangent = (mask.unsqueeze(1) * x.tangent).div_(1 - self.p)
         else:
-            jvp = x_tangent
-        return output, jvp
+            output.tangent = x.tangent
+        return output
 
 
-class CustomConv2d(nn.Conv2d):
-    def forward(self, input: torch.Tensor, jvp: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        batch_size, num_directions, channel_dims, h, w = jvp.shape
-        jvp = jvp.view(batch_size * num_directions, channel_dims, h, w)
+class Conv2d(nn.Conv2d):
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        batch_size, num_directions, channel_dims, h, w = input.tangent.shape
+        jvp = input.tangent.view(batch_size * num_directions, channel_dims, h, w)
         output = super().forward(torch.cat([input, jvp], dim=0))
         output, jvp = output[:batch_size, ...], output[batch_size:, ...]
-        jvp = jvp.view(batch_size, num_directions, -1)
-        return output, jvp
+        output.tangent = jvp.view(batch_size, num_directions, -1)
+        return output
 
 
-# class CustomBatchNorm2d(nn.BatchNorm2d):
+# class BatchNorm2d(nn.BatchNorm2d):
 #     def __init__(self, num_features, eps=1e-5, momentum=0.1, affine=True,
 #                  track_running_stats=True):
 #         super().__init__(num_features=num_features, eps=eps, momentum=momentum, affine=affine, track_running_stats=track_running_stats)
@@ -188,7 +187,7 @@ class CustomConv2d(nn.Conv2d):
 #         return output, jvp
 
 
-class CustomLayerNorm(nn.LayerNorm):
+class LayerNorm(nn.LayerNorm):
     r"""
     Compute the LayerNorm function and its JVP.
 
@@ -205,8 +204,8 @@ class CustomLayerNorm(nn.LayerNorm):
     - y: Output tensor, same shape as x
     - y_tangent: Tangent of y, same shape as y
     """
-    def forward(self, x: torch.Tensor, jvp: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        x_tangent = jvp
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x_tangent = x.tangent
         x = x.unsqueeze(1)
 
         # Compute mean and its tangent
@@ -240,22 +239,22 @@ class CustomLayerNorm(nn.LayerNorm):
             y = y + self.bias
 
         output = y.squeeze(1)
-        jvp = y_tangent
-        return output, jvp
+        output.tangent = y_tangent
+        return output
 
 
-class CustomAdaptiveAvgPool2d(nn.AdaptiveAvgPool2d):
-    def forward(self, input: torch.Tensor, jvp: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+class AdaptiveAvgPool2d(nn.AdaptiveAvgPool2d):
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
         batch_size, num_directions, channel_dims, h, w = jvp.shape
-        jvp = jvp.view(batch_size * num_directions, channel_dims, h, w)
+        jvp = input.tangent.view(batch_size * num_directions, channel_dims, h, w)
         output = super().forward(torch.cat([input, jvp], dim=0))
         output, jvp = output[:batch_size, ...], output[batch_size:, ...]
-        jvp = jvp.view(batch_size, num_directions, -1)
-        return output, jvp
+        output.tangent = jvp.view(batch_size, num_directions, -1)
+        return output
 
 
 # # TODO: Implement batched jvp
-# class CustomMaxPool2d(nn.MaxPool2d):
+# class MaxPool2d(nn.MaxPool2d):
 #     def forward(self, input: torch.Tensor, jvp: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
 #         output, indices = F.max_pool2d(input, self.kernel_size, self.stride, self.padding, self.dilation, self.ceil_mode, True)
 #         b, c, out_h, out_w = output.shape
@@ -263,34 +262,38 @@ class CustomAdaptiveAvgPool2d(nn.AdaptiveAvgPool2d):
 #         return output, jvp
 
 
-class CustomSoftmax(nn.Softmax):
-    def forward(self, input: torch.Tensor, jvp: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+class Softmax(nn.Softmax):
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
         r"""
         J = diag(softmax(x)) - softmax(x) @ softmax(x)^T
         dy = J @ dx = softmax(x)*dx - softmax(x) @ softmax(x)^T @ dx
         """
         assert self.dim == -1
         softmax = super().forward(input)
+        jvp = input.tangent
         # jvp = softmax.unsqueeze(1) * jvp - softmax.unsqueeze(1) * torch.einsum("bj,bij->bi", softmax, jvp).unsqueeze(2)
         # jvp = softmax.unsqueeze(1) * (jvp - torch.einsum("bj,bij->bi", softmax, jvp).unsqueeze(2))
         jvp = softmax.unsqueeze(1) * (jvp - (softmax.unsqueeze(1)*jvp).sum(dim=self.dim, keepdim=True))
-        return softmax, jvp
+        softmax.tangent = jvp
+        return softmax
 
 
-class CustomCrossEntropyLoss(nn.CrossEntropyLoss):
-    def forward(self, input: torch.Tensor, jvp: torch.Tensor, target: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+class CrossEntropyLoss(nn.CrossEntropyLoss):
+    def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         r"""
         J = softmax(x) - one_hot(y)
         """
         assert self.reduction == 'none'
+        jvp = input.tangent
         output = super().forward(input, target)
         softmax = F.softmax(input, dim=-1)
         onehot = F.one_hot(target, num_classes=input.size(-1)).float()
         jvp = torch.sum((softmax - onehot).unsqueeze(1) * jvp, dim=-1)
-        return output, jvp
+        output.tangent = jvp
+        return output
 
 
-# class CustomMultiheadSelfAttention(nn.MultiheadAttention):
+# class MultiheadSelfAttention(nn.MultiheadAttention):
 #     def forward(self, x, jvp) -> Tuple[torch.Tensor, torch.Tensor]:
 #         assert self.batch_first
 
@@ -334,9 +337,10 @@ class CustomCrossEntropyLoss(nn.CrossEntropyLoss):
 #         output_tangent = self.out_proj(attention_output_tangent)  # Shape: (batch_size, seq_len, embed_dim)
 
 #         return output, output_tangent
-class CustomMultiheadSelfAttention(nn.MultiheadAttention):
-    def forward(self, x, jvp) -> Tuple[torch.Tensor, torch.Tensor]:
+class MultiheadSelfAttention(nn.MultiheadAttention):
+    def forward(self, x) -> torch.Tensor:
         assert self.batch_first
+        jvp = x.tangent
 
         batch_size, seq_len, embed_dim = x.size()
         num_directions = jvp.size(1)
@@ -361,7 +365,7 @@ class CustomMultiheadSelfAttention(nn.MultiheadAttention):
         scores = torch.einsum('bqnd,bknd->bnqk', Q, K) * scaling  # Shape: (batch_size, seq_len, seq_len, num_heads)
         scores_tangent = (torch.einsum('bmqnd,bknd->bmnqk', Q_tangent, K) + torch.einsum('bqnd,bmknd->bmnqk', Q, K_tangent)) * scaling
 
-        attn_weights, attn_weights_tangent = CustomSoftmax(dim=-1)(scores, scores_tangent)
+        attn_weights, attn_weights_tangent = Softmax(dim=-1)(scores, scores_tangent)
 
         assert not self.dropout > 0.0
 
@@ -375,7 +379,7 @@ class CustomMultiheadSelfAttention(nn.MultiheadAttention):
 
         # Step 7: Final linear projection
         output = self.out_proj(attention_output)
-        output_tangent = self.out_proj(attention_output_tangent)
+        output.tangent = self.out_proj(attention_output_tangent)
 
-        return output, output_tangent
+        return output
 

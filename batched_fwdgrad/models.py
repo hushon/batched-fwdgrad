@@ -24,7 +24,7 @@ class ConvStemConfig(NamedTuple):
     activation_layer: Callable[..., nn.Module] = nn.ReLU
 
 
-class MLP(jvp_layers.CustomSequential):
+class MLP(jvp_layers.Sequential):
     """This block implements the multi-layer perceptron (MLP) module.
 
     Args:
@@ -43,7 +43,7 @@ class MLP(jvp_layers.CustomSequential):
         in_channels: int,
         hidden_channels: List[int],
         norm_layer: Optional[Callable[..., torch.nn.Module]] = None,
-        activation_layer: Optional[Callable[..., torch.nn.Module]] = jvp_layers.CustomReLU,
+        activation_layer: Optional[Callable[..., torch.nn.Module]] = jvp_layers.ReLU,
         inplace: Optional[bool] = None,
         bias: bool = True,
         dropout: float = 0.0,
@@ -51,15 +51,15 @@ class MLP(jvp_layers.CustomSequential):
         layers = []
         in_dim = in_channels
         for hidden_dim in hidden_channels[:-1]:
-            layers.append(jvp_layers.CustomLinear(in_dim, hidden_dim, bias=bias))
+            layers.append(jvp_layers.Linear(in_dim, hidden_dim, bias=bias))
             if norm_layer is not None:
                 layers.append(norm_layer(hidden_dim))
             layers.append(activation_layer())
-            layers.append(jvp_layers.CustomDropout(dropout))
+            layers.append(jvp_layers.Dropout(dropout))
             in_dim = hidden_dim
 
-        layers.append(jvp_layers.CustomLinear(in_dim, hidden_channels[-1], bias=bias))
-        layers.append(jvp_layers.CustomDropout(dropout))
+        layers.append(jvp_layers.Linear(in_dim, hidden_channels[-1], bias=bias))
+        layers.append(jvp_layers.Dropout(dropout))
 
         super().__init__(*layers)
 
@@ -70,7 +70,7 @@ class MLPBlock(MLP):
     _version = 2
 
     def __init__(self, in_dim: int, mlp_dim: int, dropout: float):
-        super().__init__(in_dim, [mlp_dim, in_dim], activation_layer=jvp_layers.CustomGeLU, inplace=None, dropout=dropout)
+        super().__init__(in_dim, [mlp_dim, in_dim], activation_layer=jvp_layers.GELU, inplace=None, dropout=dropout)
 
         for m in self.modules():
             if isinstance(m, nn.Linear):
@@ -127,8 +127,8 @@ class CustomEncoderBlock(nn.Module):
 
         # Attention block
         self.ln_1 = norm_layer(hidden_dim)
-        self.self_attention = jvp_layers.CustomMultiheadSelfAttention(hidden_dim, num_heads, dropout=attention_dropout, batch_first=True)
-        self.dropout = jvp_layers.CustomDropout(dropout)
+        self.self_attention = jvp_layers.MultiheadSelfAttention(hidden_dim, num_heads, dropout=attention_dropout, batch_first=True)
+        self.dropout = jvp_layers.Dropout(dropout)
 
         # MLP block
         self.ln_2 = norm_layer(hidden_dim)
@@ -159,13 +159,13 @@ class CustomEncoder(nn.Module):
         mlp_dim: int,
         dropout: float,
         attention_dropout: float,
-        norm_layer: Callable[..., torch.nn.Module] = partial(jvp_layers.CustomLayerNorm, eps=1e-6),
+        norm_layer: Callable[..., torch.nn.Module] = partial(jvp_layers.LayerNorm, eps=1e-6),
     ):
         super().__init__()
         # Note that batch_size is on the first dim because
         # we have batch_first=True in nn.MultiAttention() by default
         self.pos_embedding = nn.Parameter(torch.empty(1, seq_length, hidden_dim).normal_(std=0.02))  # from BERT
-        self.dropout = jvp_layers.CustomDropout(dropout)
+        self.dropout = jvp_layers.Dropout(dropout)
         layers: OrderedDict[str, nn.Module] = OrderedDict()
         for i in range(num_layers):
             layers[f"encoder_layer_{i}"] = CustomEncoderBlock(
@@ -176,7 +176,7 @@ class CustomEncoder(nn.Module):
                 attention_dropout,
                 norm_layer,
             )
-        self.layers = jvp_layers.CustomSequential(layers)
+        self.layers = jvp_layers.Sequential(layers)
         self.ln = norm_layer(hidden_dim)
 
     def forward(self, input: torch.Tensor, tangent: torch.Tensor):
@@ -202,7 +202,7 @@ class CustomVisionTransformer(nn.Module):
         attention_dropout: float = 0.0,
         num_classes: int = 1000,
         representation_size: Optional[int] = None,
-        norm_layer: Callable[..., torch.nn.Module] = partial(jvp_layers.CustomLayerNorm, eps=1e-6),
+        norm_layer: Callable[..., torch.nn.Module] = partial(jvp_layers.LayerNorm, eps=1e-6),
         conv_stem_configs: Optional[List[ConvStemConfig]] = None,
     ):
         super().__init__()
@@ -219,7 +219,7 @@ class CustomVisionTransformer(nn.Module):
 
         if conv_stem_configs is not None:
             # As per https://arxiv.org/abs/2106.14881
-            seq_proj = jvp_layers.CustomSequential()
+            seq_proj = jvp_layers.Sequential()
             prev_channels = 3
             for i, conv_stem_layer_config in enumerate(conv_stem_configs):
                 seq_proj.add_module(
@@ -235,11 +235,11 @@ class CustomVisionTransformer(nn.Module):
                 )
                 prev_channels = conv_stem_layer_config.out_channels
             seq_proj.add_module(
-                "conv_last", jvp_layers.CustomConv2d(in_channels=prev_channels, out_channels=hidden_dim, kernel_size=1)
+                "conv_last", jvp_layers.Conv2d(in_channels=prev_channels, out_channels=hidden_dim, kernel_size=1)
             )
             self.conv_proj: nn.Module = seq_proj
         else:
-            self.conv_proj = jvp_layers.CustomConv2d(
+            self.conv_proj = jvp_layers.Conv2d(
                 in_channels=3, out_channels=hidden_dim, kernel_size=patch_size, stride=patch_size
             )
 
@@ -263,13 +263,13 @@ class CustomVisionTransformer(nn.Module):
 
         heads_layers: OrderedDict[str, nn.Module] = OrderedDict()
         if representation_size is None:
-            heads_layers["head"] = jvp_layers.CustomLinear(hidden_dim, num_classes)
+            heads_layers["head"] = jvp_layers.Linear(hidden_dim, num_classes)
         else:
-            heads_layers["pre_logits"] = jvp_layers.CustomLinear(hidden_dim, representation_size)
-            heads_layers["act"] = jvp_layers.CustomTanh()
-            heads_layers["head"] = jvp_layers.CustomLinear(representation_size, num_classes)
+            heads_layers["pre_logits"] = jvp_layers.Linear(hidden_dim, representation_size)
+            heads_layers["act"] = jvp_layers.Tanh()
+            heads_layers["head"] = jvp_layers.Linear(representation_size, num_classes)
 
-        self.heads = jvp_layers.CustomSequential(heads_layers)
+        self.heads = jvp_layers.Sequential(heads_layers)
 
         if isinstance(self.conv_proj, nn.Conv2d):
             # Init the patchify stem
